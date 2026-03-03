@@ -22,18 +22,13 @@ jobs:
             python3 python3-pip python3-setuptools \
             pax file
 
-      - name: Install Meson/Ninja
-        run: |
-          python3 -m pip install --user meson ninja --break-system-packages
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
       - name: Install Android NDK
         run: |
           sys/android-ndk-install.sh 24 aarch64
 
-      - name: Build Android ARM64 (supported method)
+      - name: Build Android ARM64
         run: |
-          sys/android.sh aarch64
+          sys/android-build.sh aarch64
 
       - name: Locate r2 binary
         run: |
