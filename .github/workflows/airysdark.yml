@@ -1,10 +1,10 @@
-name: build-minimal-r2
+name: build-android-r2
 
 on:
   workflow_dispatch:
 
 jobs:
-  build-android-arm64:
+  build:
     runs-on: ubuntu-24.04
 
     steps:
@@ -17,7 +17,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            git clang make wget gperf \
+            git make clang wget gperf \
             cabextract unzip \
             python3 python3-pip python3-setuptools \
             pax file
@@ -26,30 +26,25 @@ jobs:
         run: |
           sys/android-ndk-install.sh 24 aarch64
 
-      - name: Build Android ARM64
+      - name: Build (official Android method)
         run: |
           sys/android-build.sh aarch64
 
-      - name: Locate r2 binary
-        run: |
-          echo "Searching for r2..."
-          find . -type f -name r2
-
-      - name: Copy r2 binary
+      - name: Extract r2 binary
         run: |
           mkdir -p dist
           R2_PATH=$(find . -type f -path "*aarch64*/bin/r2" | head -n 1)
           if [ -z "$R2_PATH" ]; then
-            echo "r2 binary not found!"
+            echo "r2 not found"
             exit 1
           fi
           cp "$R2_PATH" dist/r2
 
-      - name: Strip binary
+      - name: Strip
         run: |
           strip dist/r2 || true
 
-      - name: Verify architecture
+      - name: Verify
         run: |
           file dist/r2
           ldd dist/r2 || true
