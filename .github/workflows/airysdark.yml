@@ -31,28 +31,24 @@ jobs:
         run: |
           sys/android-ndk-install.sh 24 aarch64
 
-      - name: Configure (Android ARM64)
+      - name: Build Android ARM64 (supported method)
         run: |
-          ./configure \
-            --host=aarch64-linux-android \
-            --with-compiler=clang \
-            --disable-debugger \
-            --disable-r2pm \
-            --without-gpl
+          sys/android.sh aarch64
 
-      - name: Build
+      - name: Locate r2 binary
         run: |
-          make -j$(nproc)
+          echo "Searching for r2..."
+          find . -type f -name r2
 
       - name: Copy r2 binary
         run: |
           mkdir -p dist
-          if [ ! -f binr/radare2/r2 ]; then
+          R2_PATH=$(find . -type f -path "*aarch64*/bin/r2" | head -n 1)
+          if [ -z "$R2_PATH" ]; then
             echo "r2 binary not found!"
-            find . -type f -name r2
             exit 1
           fi
-          cp binr/radare2/r2 dist/r2
+          cp "$R2_PATH" dist/r2
 
       - name: Strip binary
         run: |
