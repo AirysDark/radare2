@@ -26,8 +26,11 @@ jobs:
         run: |
           sys/android-ndk-install.sh 24 aarch64
 
-      - name: Build (official Android method)
+      - name: Build (limited memory mode)
         run: |
+          export MAKEFLAGS="-j2"
+          export CFLAGS="-O1"
+          export CXXFLAGS="-O1"
           sys/android-build.sh aarch64
 
       - name: Extract r2 binary
@@ -36,6 +39,7 @@ jobs:
           R2_PATH=$(find . -type f -path "*aarch64*/bin/r2" | head -n 1)
           if [ -z "$R2_PATH" ]; then
             echo "r2 not found"
+            find . -type f -name r2
             exit 1
           fi
           cp "$R2_PATH" dist/r2
