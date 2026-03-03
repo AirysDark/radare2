@@ -31,22 +31,17 @@ jobs:
           NDK=$PWD/android-ndk-r26d
           TOOLCHAIN=$NDK/toolchains/llvm/prebuilt/linux-x86_64
           SYSROOT=$TOOLCHAIN/sysroot
-          TARGET=aarch64-linux-android24
 
           cat <<EOF > android-aarch64.txt
           [binaries]
-          c = '${TOOLCHAIN}/bin/clang'
-          cpp = '${TOOLCHAIN}/bin/clang++'
+          c = '${TOOLCHAIN}/bin/aarch64-linux-android24-clang'
+          cpp = '${TOOLCHAIN}/bin/aarch64-linux-android24-clang++'
           ar = '${TOOLCHAIN}/bin/llvm-ar'
           strip = '${TOOLCHAIN}/bin/llvm-strip'
 
           [properties]
           sys_root = '${SYSROOT}'
           needs_exe_wrapper = true
-          c_args = ['--target=${TARGET}', '--sysroot=${SYSROOT}']
-          c_link_args = ['--target=${TARGET}', '--sysroot=${SYSROOT}']
-          cpp_args = ['--target=${TARGET}', '--sysroot=${SYSROOT}']
-          cpp_link_args = ['--target=${TARGET}', '--sysroot=${SYSROOT}']
 
           [host_machine]
           system = 'android'
