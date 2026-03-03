@@ -1,63 +1,46 @@
-name: build-android-static-r2
+name: build-android-r2-snapshot
 
 on:
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-20.04   # IMPORTANT: use older runner
 
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Install deps
+      - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            git make clang gperf unzip cabextract \
-            python3 python3-pip python3-setuptools file
+            git make clang wget gperf \
+            cabextract unzip \
+            python3 python3-pip python3-setuptools \
+            pax file
 
-      - name: Install Android NDK
+      - name: Build Android (snapshot native way)
         run: |
-          sys/android-ndk-install.sh 28 aarch64
+          sys/android-build.sh aarch64
 
-      - name: Disable heavy plugins
+      - name: Locate produced tarball
         run: |
-          cp dist/plugins-cfg/plugins.nocs.cfg plugins.cfg
-          sed -i 's/^lang/#lang/g' plugins.cfg
+          ls -lh *.tar.gz
 
-      - name: Configure
+      - name: Extract r2 from tarball
         run: |
-          ./configure \
-            --with-compiler=android \
-            --with-ostype=android \
-            --disable-debugger \
-            --disable-r2pm \
-            --without-gpl \
-            --enable-static \
-            --disable-shared
-
-      - name: Build
-        run: |
-          make -j2
-
-      - name: Collect binary
-        run: |
-          mkdir -p dist
-          cp binr/radare2/r2 dist/r2
-
-      - name: Strip
-        run: |
-          ${NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-strip dist/r2 || true
+          mkdir out
+          tar -xzf radare2-*-android-aarch64*.tar.gz -C out
+          find out -name r2
+          cp $(find out -name r2 | head -n1) ./r2
 
       - name: Verify
         run: |
-          file dist/r2
-          ldd dist/r2 || true
+          file r2
 
       - uses: actions/upload-artifact@v4
         with:
-          name: r2-android-arm64-static
-          path: dist/r2
+          name: r2-android-aarch64
+          path: r2
