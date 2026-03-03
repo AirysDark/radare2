@@ -42,6 +42,8 @@ jobs:
           [properties]
           sys_root = '${SYSROOT}'
           needs_exe_wrapper = true
+          c_link_args = ['-llog', '-landroid']
+          cpp_link_args = ['-llog', '-landroid']
 
           [host_machine]
           system = 'android'
