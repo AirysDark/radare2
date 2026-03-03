@@ -8,8 +8,10 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-      - name: Checkout
+      - name: Checkout (with submodules)
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Install dependencies
         run: |
@@ -23,6 +25,7 @@ jobs:
       - name: Install Meson/Ninja
         run: |
           python3 -m pip install --user meson ninja --break-system-packages
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Install Android NDK
         run: |
@@ -42,6 +45,10 @@ jobs:
           mkdir -p dist
           R2_PATH=$(find . -type f -path "*aarch64*/bin/r2" | head -n 1)
           echo "Found r2 at: $R2_PATH"
+          if [ -z "$R2_PATH" ]; then
+            echo "r2 binary not found!"
+            exit 1
+          fi
           cp "$R2_PATH" dist/r2
 
       - name: Strip binary
@@ -51,6 +58,7 @@ jobs:
       - name: Verify architecture
         run: |
           file dist/r2
+          ldd dist/r2 || true
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
