@@ -19,43 +19,33 @@ jobs:
             meson ninja-build \
             python3 python3-pip \
             gperf cabextract unzip \
-            clang file wget
+            file wget
 
       - name: Install Android NDK
         run: |
           wget -q https://dl.google.com/android/repository/android-ndk-r26d-linux.zip
           unzip -q android-ndk-r26d-linux.zip
 
-      - name: Create Meson cross file
+      - name: Configure environment
         run: |
-          NDK_PATH="$PWD/android-ndk-r26d"
-          TOOLCHAIN="$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64"
-          SYSROOT="$TOOLCHAIN/sysroot"
+          export NDK=$PWD/android-ndk-r26d
+          export TOOLCHAIN=$NDK/toolchains/llvm/prebuilt/linux-x86_64
+          export SYSROOT=$TOOLCHAIN/sysroot
+          export TARGET=aarch64-linux-android24
 
-          cat <<EOF > android-aarch64.txt
-          [binaries]
-          c = '${TOOLCHAIN}/bin/clang'
-          cpp = '${TOOLCHAIN}/bin/clang++'
-          ar = '${TOOLCHAIN}/bin/llvm-ar'
-          strip = '${TOOLCHAIN}/bin/llvm-strip'
+          echo "NDK=$NDK" >> $GITHUB_ENV
+          echo "TOOLCHAIN=$TOOLCHAIN" >> $GITHUB_ENV
+          echo "SYSROOT=$SYSROOT" >> $GITHUB_ENV
+          echo "TARGET=$TARGET" >> $GITHUB_ENV
 
-          [properties]
-          sys_root = '${SYSROOT}'
-          c_args = ['--target=aarch64-linux-android24']
-          c_link_args = ['--target=aarch64-linux-android24']
-
-          [host_machine]
-          system = 'android'
-          cpu_family = 'aarch64'
-          cpu = 'aarch64'
-          endian = 'little'
-          EOF
-
-      - name: Configure
+      - name: Configure Meson
         run: |
           meson setup build \
-            --cross-file android-aarch64.txt \
-            --buildtype release
+            --buildtype=release \
+            -Dc_args="--target=$TARGET --sysroot=$SYSROOT" \
+            -Dc_link_args="--target=$TARGET --sysroot=$SYSROOT" \
+            -Dcpp_args="--target=$TARGET --sysroot=$SYSROOT" \
+            -Dcpp_link_args="--target=$TARGET --sysroot=$SYSROOT"
 
       - name: Build
         run: |
