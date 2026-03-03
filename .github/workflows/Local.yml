@@ -1,0 +1,49 @@
+name: build-android-r2
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: [self-hosted, linux, arm64-builder]
+
+    steps:
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Android NDK
+        run: |
+          sys/android-ndk-install.sh 24 aarch64
+
+      - name: Build (official Android method)
+        run: |
+          export MAKEFLAGS="-j2"
+          export CFLAGS="-O1"
+          sys/android-build.sh aarch64
+
+      - name: Extract r2 binary
+        run: |
+          mkdir -p dist
+          R2_PATH=$(find . -type f -path "*aarch64*/bin/r2" | head -n 1)
+          if [ -z "$R2_PATH" ]; then
+            echo "r2 not found"
+            exit 1
+          fi
+          cp "$R2_PATH" dist/r2
+
+      - name: Strip
+        run: |
+          strip dist/r2 || true
+
+      - name: Verify
+        run: |
+          file dist/r2
+          ldd dist/r2 || true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: r2-android-arm64
+          path: dist/r2
