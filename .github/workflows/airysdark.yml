@@ -12,7 +12,7 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install system dependencies
+      - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -20,26 +20,25 @@ jobs:
             cabextract unzip python3 \
             pax file
 
-      - name: Build Android r2 (official supported path)
+      - name: Install NDK r17c (compatible with standalone toolchain)
+        run: |
+          wget -q https://dl.google.com/android/repository/android-ndk-r17c-linux-x86_64.zip
+          unzip -q android-ndk-r17c-linux-x86_64.zip
+          export NDK=$PWD/android-ndk-r17c
+          python $NDK/build/tools/make_standalone_toolchain.py \
+            --arch arm64 \
+            --api 28 \
+            --install-dir toolchain
+
+      - name: Build Android r2
         run: |
           set -e
-
-          # Prevent CI OOM
           export MAKEFLAGS="-j1"
           export CFLAGS="-O1"
           export CXXFLAGS="-O1"
-
-          # Install NDK + create standalone toolchain
-          sys/android-ndk-install.sh 28 aarch64
-
-          # IMPORTANT:
-          # Do NOT export NDK manually.
-          # Do NOT override toolchain.
-          # Let scripts use ./toolchain
-
           sys/android-build.sh aarch64
 
-      - name: Extract r2 from tarball
+      - name: Extract r2
         run: |
           mkdir -p dist
           TAR=$(ls radare2-*-android-aarch64.tar.gz | head -n1)
@@ -53,7 +52,7 @@ jobs:
           R2=$(find . -type f -path "*android-aarch64*/data/*/bin/r2" | head -n1)
 
           if [ -z "$R2" ]; then
-            echo "r2 binary not found inside tarball"
+            echo "r2 not found"
             exit 1
           fi
 
