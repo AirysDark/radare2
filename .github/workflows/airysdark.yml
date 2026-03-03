@@ -29,18 +29,25 @@ jobs:
           wget -q https://dl.google.com/android/repository/android-ndk-r26d-linux.zip
           unzip -q android-ndk-r26d-linux.zip
 
-      # Create Meson cross file with absolute toolchain paths
+      # Create Meson cross file with proper sysroot
       - name: Create Meson cross file
         run: |
           NDK_PATH="$PWD/android-ndk-r26d"
+          TOOLCHAIN="$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64"
+          SYSROOT="$TOOLCHAIN/sysroot"
+
           echo "Using NDK at $NDK_PATH"
+          echo "Using sysroot at $SYSROOT"
 
           cat <<EOF > android-aarch64.txt
           [binaries]
-          c = '${NDK_PATH}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang'
-          cpp = '${NDK_PATH}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang++'
-          ar = '${NDK_PATH}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar'
-          strip = '${NDK_PATH}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip'
+          c = '${TOOLCHAIN}/bin/aarch64-linux-android24-clang'
+          cpp = '${TOOLCHAIN}/bin/aarch64-linux-android24-clang++'
+          ar = '${TOOLCHAIN}/bin/llvm-ar'
+          strip = '${TOOLCHAIN}/bin/llvm-strip'
+
+          [properties]
+          sys_root = '${SYSROOT}'
 
           [host_machine]
           system = 'android'
@@ -49,7 +56,7 @@ jobs:
           endian = 'little'
           EOF
 
-      # Configure Meson build
+      # Configure Meson
       - name: Configure
         run: |
           meson setup build \
