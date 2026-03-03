@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04   # IMPORTANT: use older runner
+    runs-on: ubuntu-22.04
 
     steps:
       - uses: actions/checkout@v4
@@ -21,23 +21,22 @@ jobs:
             python3 python3-pip python3-setuptools \
             pax file
 
-      - name: Build Android (snapshot native way)
+      - name: Install legacy NDK r21d
         run: |
+          wget -q https://dl.google.com/android/repository/android-ndk-r21d-linux-x86_64.zip
+          unzip -q android-ndk-r21d-linux-x86_64.zip
+          echo "NDK=$PWD/android-ndk-r21d" >> $GITHUB_ENV
+
+      - name: Build Android snapshot style
+        run: |
+          export NDK=$NDK
           sys/android-build.sh aarch64
 
-      - name: Locate produced tarball
-        run: |
-          ls -lh *.tar.gz
-
-      - name: Extract r2 from tarball
+      - name: Extract r2
         run: |
           mkdir out
           tar -xzf radare2-*-android-aarch64*.tar.gz -C out
-          find out -name r2
           cp $(find out -name r2 | head -n1) ./r2
-
-      - name: Verify
-        run: |
           file r2
 
       - uses: actions/upload-artifact@v4
