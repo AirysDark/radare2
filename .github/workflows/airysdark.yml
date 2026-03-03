@@ -25,31 +25,36 @@ jobs:
         run: |
           sys/android-ndk-install.sh 24 aarch64
 
-      - name: Build (official android-build.sh)
+      - name: Build Android (official path)
         run: |
           set -e
-
-          # Prevent OOM
           export MAKEFLAGS="-j1"
           export CFLAGS="-O1"
           export CXXFLAGS="-O1"
 
-          # IMPORTANT: android-build.sh expects this
-          export NDK="$HOME/android-ndk"
+          # DO NOT export NDK
+          # Let android-build.sh handle shell re-exec
 
-          # Run build
           sys/android-build.sh aarch64
 
-      - name: Extract r2 binary
+      - name: Extract r2
         run: |
           mkdir -p dist
-          R2_PATH=$(find . -type f -path "*aarch64*/bin/r2" | head -n 1)
-          if [ -z "$R2_PATH" ]; then
-            echo "r2 not found"
-            find . -type f -name r2
+          TAR=$(ls radare2-*-android-aarch64.tar.gz | head -n1)
+          if [ -z "$TAR" ]; then
+            echo "No tarball produced"
             exit 1
           fi
-          cp "$R2_PATH" dist/r2
+
+          tar -xzf "$TAR"
+          R2=$(find . -type f -path "*aarch64*/bin/r2" | head -n1)
+
+          if [ -z "$R2" ]; then
+            echo "r2 not found"
+            exit 1
+          fi
+
+          cp "$R2" dist/r2
           file dist/r2
 
       - uses: actions/upload-artifact@v4
