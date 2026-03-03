@@ -1,0 +1,59 @@
+name: build-minimal-r2
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-android-arm64:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            git clang make wget gperf \
+            cabextract unzip \
+            python3 python3-pip python3-setuptools \
+            pax file
+
+      - name: Install Meson/Ninja
+        run: |
+          python3 -m pip install --user meson ninja --break-system-packages
+
+      - name: Install Android NDK
+        run: |
+          sys/android-ndk-install.sh 24 aarch64
+
+      - name: Build Android ARM64
+        run: |
+          sys/android-build.sh aarch64
+
+      - name: Locate r2 binary
+        run: |
+          echo "Searching for r2 binary..."
+          find . -type f -name r2
+
+      - name: Copy minimal binary
+        run: |
+          mkdir -p dist
+          R2_PATH=$(find . -type f -path "*aarch64*/bin/r2" | head -n 1)
+          echo "Found r2 at: $R2_PATH"
+          cp "$R2_PATH" dist/r2
+
+      - name: Strip binary
+        run: |
+          strip dist/r2 || true
+
+      - name: Verify architecture
+        run: |
+          file dist/r2
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: r2-android-arm64
+          path: dist/r2
