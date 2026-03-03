@@ -16,56 +16,32 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            meson ninja-build \
-            python3 python3-pip \
-            gperf cabextract unzip \
-            file wget
+            git make clang wget gperf \
+            cabextract unzip \
+            python3 python3-pip python3-setuptools \
+            pax file
 
-      - name: Install Android NDK
+      - name: Build Android (official method, single shell)
         run: |
-          wget -q https://dl.google.com/android/repository/android-ndk-r26d-linux.zip
-          unzip -q android-ndk-r26d-linux.zip
+          set -e
 
-      - name: Create Meson cross file
-        run: |
-          NDK=$PWD/android-ndk-r26d
-          TOOLCHAIN=$NDK/toolchains/llvm/prebuilt/linux-x86_64
-          SYSROOT=$TOOLCHAIN/sysroot
+          export MAKEFLAGS="-j1"
+          export CFLAGS="-O1"
+          export CXXFLAGS="-O1"
 
-          cat <<EOF > android-aarch64.txt
-          [binaries]
-          c = '${TOOLCHAIN}/bin/aarch64-linux-android24-clang'
-          cpp = '${TOOLCHAIN}/bin/aarch64-linux-android24-clang++'
-          ar = '${TOOLCHAIN}/bin/llvm-ar'
-          strip = '${TOOLCHAIN}/bin/llvm-strip'
+          sys/android-ndk-install.sh 24 aarch64
+          sys/android-build.sh aarch64
 
-          [properties]
-          sys_root = '${SYSROOT}'
-          needs_exe_wrapper = true
-          c_link_args = ['-llog', '-landroid']
-          cpp_link_args = ['-llog', '-landroid']
-
-          [host_machine]
-          system = 'android'
-          cpu_family = 'aarch64'
-          cpu = 'aarch64'
-          endian = 'little'
-          EOF
-
-      - name: Configure
-        run: |
-          meson setup build \
-            --cross-file android-aarch64.txt \
-            --buildtype release
-
-      - name: Build
-        run: |
-          ninja -C build -j2
-
-      - name: Extract r2
+      - name: Extract r2 binary
         run: |
           mkdir -p dist
-          cp build/binr/radare2/r2 dist/r2
+          R2_PATH=$(find . -type f -path "*aarch64*/bin/r2" | head -n 1)
+          if [ -z "$R2_PATH" ]; then
+            echo "r2 not found"
+            find . -type f -name r2
+            exit 1
+          fi
+          cp "$R2_PATH" dist/r2
           file dist/r2
 
       - uses: actions/upload-artifact@v4
