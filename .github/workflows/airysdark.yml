@@ -8,10 +8,12 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
+      # Checkout with submodules (required for radare2)
       - uses: actions/checkout@v4
         with:
           submodules: recursive
 
+      # Install required build tools
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -19,22 +21,26 @@ jobs:
             meson ninja-build \
             python3 python3-pip \
             gperf cabextract unzip \
-            clang file
+            clang file wget
 
+      # Download Android NDK
       - name: Install Android NDK
         run: |
           wget -q https://dl.google.com/android/repository/android-ndk-r26d-linux.zip
           unzip -q android-ndk-r26d-linux.zip
-          echo "NDK=$PWD/android-ndk-r26d" >> $GITHUB_ENV
 
-      - name: Create meson cross file
+      # Create proper Meson cross file with absolute NDK paths
+      - name: Create Meson cross file
         run: |
+          NDK_PATH="$PWD/android-ndk-r26d"
+          echo "Using NDK at $NDK_PATH"
+
           cat <<EOF > android-aarch64.txt
           [binaries]
-          c = '$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang'
-          cpp = '$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang++'
-          ar = '$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar'
-          strip = '$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip'
+          c = '${NDK_PATH}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang'
+          cpp = '${NDK_PATH}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang++'
+          ar = '${NDK_PATH}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar'
+          strip = '${NDK_PATH}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip'
 
           [host_machine]
           system = 'android'
@@ -43,23 +49,27 @@ jobs:
           endian = 'little'
           EOF
 
-      - name: Configure Meson
+      # Configure Meson build
+      - name: Configure
         run: |
           meson setup build \
             --cross-file android-aarch64.txt \
             --buildtype release \
             -Dgpl=false
 
+      # Build using Ninja (limit parallelism to avoid OOM)
       - name: Build
         run: |
-          ninja -C build
+          ninja -C build -j2
 
-      - name: Copy r2
+      # Extract r2 binary
+      - name: Extract r2
         run: |
           mkdir -p dist
           cp build/binr/radare2/r2 dist/r2
           file dist/r2
 
+      # Upload artifact
       - uses: actions/upload-artifact@v4
         with:
           name: r2-android-arm64
