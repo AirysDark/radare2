@@ -1,4 +1,4 @@
-name: build-android-r2
+name: build-android-r2 local
 
 on:
   workflow_dispatch:
