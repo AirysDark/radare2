@@ -21,15 +21,23 @@ jobs:
             python3 python3-pip python3-setuptools \
             pax file
 
-      - name: Build Android (official method, single shell)
+      - name: Install Android NDK
+        run: |
+          sys/android-ndk-install.sh 24 aarch64
+
+      - name: Build (official android-build.sh)
         run: |
           set -e
 
+          # Prevent OOM
           export MAKEFLAGS="-j1"
           export CFLAGS="-O1"
           export CXXFLAGS="-O1"
 
-          sys/android-ndk-install.sh 24 aarch64
+          # IMPORTANT: android-build.sh expects this
+          export NDK="$HOME/android-ndk"
+
+          # Run build
           sys/android-build.sh aarch64
 
       - name: Extract r2 binary
