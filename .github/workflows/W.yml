@@ -23,24 +23,27 @@ jobs:
         run: |
           sys/android-ndk-install.sh 28 aarch64
 
-      - name: Configure minimal static build
+      - name: Disable heavy plugins
         run: |
-          export CFLAGS="-O2 -fPIC"
+          cp dist/plugins-cfg/plugins.nocs.cfg plugins.cfg
+          sed -i 's/^lang/#lang/g' plugins.cfg
+
+      - name: Configure
+        run: |
           ./configure \
             --with-compiler=android \
             --with-ostype=android \
             --disable-debugger \
             --disable-r2pm \
             --without-gpl \
-            --without-qjs \
             --enable-static \
             --disable-shared
 
-      - name: Build (safe memory mode)
+      - name: Build
         run: |
           make -j2
 
-      - name: Collect r2
+      - name: Collect binary
         run: |
           mkdir -p dist
           cp binr/radare2/r2 dist/r2
