@@ -26,11 +26,20 @@ jobs:
         run: |
           sys/android-ndk-install.sh 24 aarch64
 
-      - name: Build (limited memory mode)
+      - name: Build (stable Android mode)
         run: |
           export MAKEFLAGS="-j2"
           export CFLAGS="-O1"
           export CXXFLAGS="-O1"
+
+          # Locate NDK directory installed by script
+          NDK_DIR=$(find $HOME -maxdepth 2 -type d -name "android-ndk*" | head -n 1)
+          echo "NDK_DIR=$NDK_DIR"
+
+          export ANDROID_NDK_ROOT="$NDK_DIR"
+          export ANDROID_NDK_HOME="$NDK_DIR"
+          export PATH="$NDK_DIR/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH"
+
           sys/android-build.sh aarch64
 
       - name: Extract r2 binary
