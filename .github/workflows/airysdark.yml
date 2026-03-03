@@ -8,8 +8,7 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-      - name: Checkout (with submodules)
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
 
@@ -17,53 +16,51 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            git make clang wget gperf \
-            cabextract unzip \
-            python3 python3-pip python3-setuptools \
-            pax file
+            meson ninja-build \
+            python3 python3-pip \
+            gperf cabextract unzip \
+            clang file
 
       - name: Install Android NDK
         run: |
-          sys/android-ndk-install.sh 24 aarch64
+          wget -q https://dl.google.com/android/repository/android-ndk-r26d-linux.zip
+          unzip -q android-ndk-r26d-linux.zip
+          echo "NDK=$PWD/android-ndk-r26d" >> $GITHUB_ENV
 
-      - name: Build (stable Android mode)
+      - name: Create meson cross file
         run: |
-          export MAKEFLAGS="-j2"
-          export CFLAGS="-O1"
-          export CXXFLAGS="-O1"
+          cat <<EOF > android-aarch64.txt
+          [binaries]
+          c = '$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang'
+          cpp = '$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang++'
+          ar = '$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar'
+          strip = '$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip'
 
-          # Locate NDK directory installed by script
-          NDK_DIR=$(find $HOME -maxdepth 2 -type d -name "android-ndk*" | head -n 1)
-          echo "NDK_DIR=$NDK_DIR"
+          [host_machine]
+          system = 'android'
+          cpu_family = 'aarch64'
+          cpu = 'aarch64'
+          endian = 'little'
+          EOF
 
-          export ANDROID_NDK_ROOT="$NDK_DIR"
-          export ANDROID_NDK_HOME="$NDK_DIR"
-          export PATH="$NDK_DIR/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH"
+      - name: Configure Meson
+        run: |
+          meson setup build \
+            --cross-file android-aarch64.txt \
+            --buildtype release \
+            -Dgpl=false
 
-          sys/android-build.sh aarch64
+      - name: Build
+        run: |
+          ninja -C build
 
-      - name: Extract r2 binary
+      - name: Copy r2
         run: |
           mkdir -p dist
-          R2_PATH=$(find . -type f -path "*aarch64*/bin/r2" | head -n 1)
-          if [ -z "$R2_PATH" ]; then
-            echo "r2 not found"
-            find . -type f -name r2
-            exit 1
-          fi
-          cp "$R2_PATH" dist/r2
-
-      - name: Strip
-        run: |
-          strip dist/r2 || true
-
-      - name: Verify
-        run: |
+          cp build/binr/radare2/r2 dist/r2
           file dist/r2
-          ldd dist/r2 || true
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: r2-android-arm64
           path: dist/r2
