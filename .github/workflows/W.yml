@@ -8,49 +8,44 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-      - name: Checkout (with submodules)
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Install dependencies
+      - name: Install deps
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            git make clang wget gperf \
-            cabextract unzip \
-            python3 python3-pip python3-setuptools \
-            pax file
+            git make clang gperf unzip cabextract \
+            python3 python3-pip python3-setuptools file
 
       - name: Install Android NDK
         run: |
           sys/android-ndk-install.sh 28 aarch64
 
-      - name: Force minimal plugins (no QuickJS, no heavy deps)
+      - name: Configure minimal static build
         run: |
-          cp dist/plugins-cfg/plugins.nocs.cfg plugins.cfg
-
-      - name: Configure static build
-        run: |
+          export CFLAGS="-O2 -fPIC"
           ./configure \
             --with-compiler=android \
             --with-ostype=android \
             --disable-debugger \
             --disable-r2pm \
             --without-gpl \
+            --without-qjs \
             --enable-static \
             --disable-shared
 
-      - name: Build (low memory mode)
+      - name: Build (safe memory mode)
         run: |
           make -j2
 
-      - name: Extract r2 binary
+      - name: Collect r2
         run: |
           mkdir -p dist
           cp binr/radare2/r2 dist/r2
 
-      - name: Strip binary
+      - name: Strip
         run: |
           ${NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-strip dist/r2 || true
 
@@ -59,8 +54,7 @@ jobs:
           file dist/r2
           ldd dist/r2 || true
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: r2-android-arm64-static
           path: dist/r2
