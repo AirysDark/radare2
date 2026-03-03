@@ -8,12 +8,10 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-      # Checkout source with submodules
       - uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      # Install required build dependencies
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -23,31 +21,28 @@ jobs:
             gperf cabextract unzip \
             clang file wget
 
-      # Download Android NDK
       - name: Install Android NDK
         run: |
           wget -q https://dl.google.com/android/repository/android-ndk-r26d-linux.zip
           unzip -q android-ndk-r26d-linux.zip
 
-      # Create Meson cross file with proper sysroot
       - name: Create Meson cross file
         run: |
           NDK_PATH="$PWD/android-ndk-r26d"
           TOOLCHAIN="$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64"
           SYSROOT="$TOOLCHAIN/sysroot"
 
-          echo "Using NDK at $NDK_PATH"
-          echo "Using sysroot at $SYSROOT"
-
           cat <<EOF > android-aarch64.txt
           [binaries]
-          c = '${TOOLCHAIN}/bin/aarch64-linux-android24-clang'
-          cpp = '${TOOLCHAIN}/bin/aarch64-linux-android24-clang++'
+          c = '${TOOLCHAIN}/bin/clang'
+          cpp = '${TOOLCHAIN}/bin/clang++'
           ar = '${TOOLCHAIN}/bin/llvm-ar'
           strip = '${TOOLCHAIN}/bin/llvm-strip'
 
           [properties]
           sys_root = '${SYSROOT}'
+          c_args = ['--target=aarch64-linux-android24']
+          c_link_args = ['--target=aarch64-linux-android24']
 
           [host_machine]
           system = 'android'
@@ -56,26 +51,22 @@ jobs:
           endian = 'little'
           EOF
 
-      # Configure Meson
       - name: Configure
         run: |
           meson setup build \
             --cross-file android-aarch64.txt \
             --buildtype release
 
-      # Build (limit parallelism to avoid OOM)
       - name: Build
         run: |
           ninja -C build -j2
 
-      # Extract r2 binary
       - name: Extract r2
         run: |
           mkdir -p dist
           cp build/binr/radare2/r2 dist/r2
           file dist/r2
 
-      # Upload artifact
       - uses: actions/upload-artifact@v4
         with:
           name: r2-android-arm64
