@@ -18,8 +18,9 @@ jobs:
           sudo apt-get install -y \
             git make clang wget gperf \
             cabextract unzip \
-            python3 python3-pip python3-setuptools \
+            python2 \
             pax file
+          sudo ln -sf /usr/bin/python2 /usr/bin/python
 
       - name: Install legacy NDK r21d
         run: |
