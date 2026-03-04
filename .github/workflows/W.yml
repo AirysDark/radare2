@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    runs-on: [self-hosted, wsl-20]
+    runs-on: self-hosted
 
     steps:
       - name: Checkout repository
@@ -13,23 +13,37 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Build Android snapshot
+      - name: Install build dependencies
         run: |
-          # Set NDK location
-          export NDK=$HOME/android-ndk-r21d
+          sudo apt-get update
+          sudo apt-get install -y \
+            git \
+            make \
+            clang \
+            gperf \
+            cabextract \
+            unzip \
+            python2 \
+            pax \
+            file
 
-          # Add Android toolchain to PATH
-          export PATH=$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
+      - name: Set Android NDK environment
+        run: |
+          echo "ANDROID_NDK_HOME=$HOME/android-ndk-r21d" >> $GITHUB_ENV
+          echo "NDK=$HOME/android-ndk-r21d" >> $GITHUB_ENV
+          echo "PATH=$HOME/android-ndk-r21d/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH" >> $GITHUB_ENV
 
-          # Confirm compiler exists
-          which aarch64-linux-android-clang
+      - name: Build radare2 for Android (aarch64)
+        run: |
+          export ANDROID_NDK_HOME=$HOME/android-ndk-r21d
+          export NDK=$ANDROID_NDK_HOME
+          export PATH=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
 
-          # Build using snapshot script
           sys/android-build.sh aarch64
 
       - name: Extract r2 binary
         run: |
-          mkdir -p out
+          mkdir out
           tar -xzf radare2-*-android-aarch64*.tar.gz -C out
           cp $(find out -name r2 | head -n1) ./r2
           file r2
