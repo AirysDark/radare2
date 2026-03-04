@@ -5,35 +5,21 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
-    container: ubuntu:20.04
+    runs-on: [self-hosted, wsl-20]
 
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Install dependencies
-        run: |
-          apt-get update
-          DEBIAN_FRONTEND=noninteractive apt-get install -y \
-            git make clang wget gperf \
-            cabextract unzip \
-            python2 \
-            pax file
-
       - name: Build snapshot
         run: |
-          cd $GITHUB_WORKSPACE
-          wget -q https://dl.google.com/android/repository/android-ndk-r21d-linux-x86_64.zip
-          unzip -q android-ndk-r21d-linux-x86_64.zip
-          export NDK=$PWD/android-ndk-r21d
+          export NDK=$HOME/android-ndk-r21d
           sys/android-build.sh aarch64
 
       - name: Extract r2
         run: |
-          cd $GITHUB_WORKSPACE
-          mkdir out
+          mkdir -p out
           tar -xzf radare2-*-android-aarch64*.tar.gz -C out
           cp $(find out -name r2 | head -n1) ./r2
           file r2
