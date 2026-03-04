@@ -8,23 +8,34 @@ jobs:
     runs-on: [self-hosted, wsl-20]
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Build snapshot
+      - name: Build Android snapshot
         run: |
+          # Set NDK location
           export NDK=$HOME/android-ndk-r21d
+
+          # Add Android toolchain to PATH
+          export PATH=$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
+
+          # Confirm compiler exists
+          which aarch64-linux-android-clang
+
+          # Build using snapshot script
           sys/android-build.sh aarch64
 
-      - name: Extract r2
+      - name: Extract r2 binary
         run: |
           mkdir -p out
           tar -xzf radare2-*-android-aarch64*.tar.gz -C out
           cp $(find out -name r2 | head -n1) ./r2
           file r2
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
           name: r2-android-aarch64
           path: r2
