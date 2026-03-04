@@ -6,6 +6,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
+    container: ubuntu:20.04
 
     steps:
       - uses: actions/checkout@v4
@@ -14,19 +15,19 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y \
             git make clang wget gperf \
             cabextract unzip \
             python2 \
             pax file
-          sudo ln -sf /usr/bin/python2 /usr/bin/python
 
       - name: Install legacy NDK r21d
         run: |
           wget -q https://dl.google.com/android/repository/android-ndk-r21d-linux-x86_64.zip
           unzip -q android-ndk-r21d-linux-x86_64.zip
-          echo "NDK=$PWD/android-ndk-r21d" >> $GITHUB_ENV
+          export NDK=$PWD/android-ndk-r21d
+          echo "NDK=$NDK" >> $GITHUB_ENV
 
       - name: Build Android snapshot style
         run: |
